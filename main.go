@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/fs1g17/MiniQ/queue"
 )
@@ -29,10 +30,13 @@ func main() {
 	q.Enqueue(&job2)
 
 	worker := queue.Worker[MyData]{
-		Work:  func(t MyData) { fmt.Println(t) },
+		Work: func(d MyData) {
+			t := time.Now()
+			fmt.Println(t)
+			fmt.Println(d)
+		},
 		Queue: &q,
 	}
 
-	worker.Perform()
 	worker.Perform()
 }
