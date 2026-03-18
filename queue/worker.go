@@ -21,6 +21,6 @@ func (w *Worker[T]) Perform() {
 			continue
 		}
 		w.Channel <- fmt.Sprintf("job %s initiated by worker %d", job.Name, w.ID)
-		go w.Work(job.Data)
+		w.Work(job.Data)
 	}
 }
