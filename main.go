@@ -29,14 +29,34 @@ func main() {
 	q.Enqueue(&job1)
 	q.Enqueue(&job2)
 
-	worker := queue.Worker[MyData]{
+	messages := make(chan string)
+
+	worker0 := queue.Worker[MyData]{
+		ID: 0,
 		Work: func(d MyData) {
 			t := time.Now()
 			fmt.Println(t)
 			fmt.Println(d)
 		},
-		Queue: &q,
+		Queue:   &q,
+		Channel: messages,
+	}
+	worker1 := queue.Worker[MyData]{
+		ID: 1,
+		Work: func(d MyData) {
+			t := time.Now()
+			fmt.Println(t)
+			fmt.Println(d)
+		},
+		Queue:   &q,
+		Channel: messages,
 	}
 
-	worker.Perform()
+	go worker0.Perform()
+	go worker1.Perform()
+
+	for {
+		msg := <-messages
+		fmt.Println(msg)
+	}
 }
