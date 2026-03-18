@@ -7,17 +7,32 @@ import (
 )
 
 func main() {
-	q := queue.Queue{}
+	type MyData struct {
+		A int
+		B int
+	}
 
-	job1 := queue.Job{Name: "job1"}
-	job2 := queue.Job{Name: "job2"}
+	q := queue.Queue[MyData]{}
+
+	job1 := queue.Job[MyData]{
+		Name:   "job1",
+		Status: queue.Queued,
+		Data:   MyData{A: 1, B: 2},
+	}
+	job2 := queue.Job[MyData]{
+		Name:   "job2",
+		Status: queue.Queued,
+		Data:   MyData{A: 3, B: 4},
+	}
 
 	q.Enqueue(&job1)
 	q.Enqueue(&job2)
 
-	dq1 := q.Dequeue()
-	fmt.Println(dq1.Name)
+	worker := queue.Worker[MyData]{
+		Work:  func(t MyData) { fmt.Println(t) },
+		Queue: &q,
+	}
 
-	dq2 := q.Dequeue()
-	fmt.Println(dq2.Name)
+	worker.Perform()
+	worker.Perform()
 }

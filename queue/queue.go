@@ -1,14 +1,14 @@
 package queue
 
-type Queue struct {
-	Jobs []*Job
+type Queue[T any] struct {
+	Jobs []*Job[T]
 }
 
-func (q *Queue) Enqueue(job *Job) {
+func (q *Queue[T]) Enqueue(job *Job[T]) {
 	q.Jobs = append(q.Jobs, job)
 }
 
-func (q *Queue) Dequeue() *Job {
+func (q *Queue[T]) Dequeue() *Job[T] {
 	job := q.Jobs[0]
 	q.Jobs = q.Jobs[1:]
 

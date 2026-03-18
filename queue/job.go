@@ -20,7 +20,8 @@ func (js JobStatus) String() string {
 	return statusName[js]
 }
 
-type Job struct {
+type Job[T any] struct {
 	Name   string
 	Status JobStatus
+	Data   T
 }
