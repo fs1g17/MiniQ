@@ -8,6 +8,8 @@ type Queue[T any] struct {
 }
 
 func (q *Queue[T]) Enqueue(job *Job[T]) {
+	q.mu.Lock()
+	defer q.mu.Unlock()
 	q.Jobs = append(q.Jobs, job)
 }
 
