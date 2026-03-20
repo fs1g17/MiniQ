@@ -25,3 +25,7 @@ type Job[T any] struct {
 	Status JobStatus
 	Data   T
 }
+
+func (j *Job[T]) UpdateStatus(js JobStatus) {
+	j.Status = js
+}

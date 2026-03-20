@@ -7,7 +7,7 @@ import (
 
 type Worker[T any] struct {
 	ID      int
-	Work    func(T)
+	Work    func(T) error
 	Queue   *Queue[T]
 	Channel chan string
 }
@@ -20,7 +20,13 @@ func (w *Worker[T]) Perform() {
 			w.Channel <- fmt.Sprintf("job was nil for worker %d", w.ID)
 			continue
 		}
+		job.UpdateStatus(Processing)
 		w.Channel <- fmt.Sprintf("job %s initiated by worker %d", job.Name, w.ID)
-		w.Work(job.Data)
+		err := w.Work(job.Data)
+		if err != nil {
+			job.UpdateStatus(Failed)
+		} else {
+			job.UpdateStatus(Completed)
+		}
 	}
 }

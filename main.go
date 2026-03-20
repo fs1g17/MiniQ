@@ -33,20 +33,22 @@ func main() {
 
 	worker0 := queue.Worker[MyData]{
 		ID: 0,
-		Work: func(d MyData) {
+		Work: func(d MyData) error {
 			t := time.Now()
 			fmt.Println(t)
 			fmt.Println(d)
+			return nil
 		},
 		Queue:   &q,
 		Channel: messages,
 	}
 	worker1 := queue.Worker[MyData]{
 		ID: 1,
-		Work: func(d MyData) {
+		Work: func(d MyData) error {
 			t := time.Now()
 			fmt.Println(t)
 			fmt.Println(d)
+			return nil
 		},
 		Queue:   &q,
 		Channel: messages,
