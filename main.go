@@ -48,6 +48,7 @@ func main() {
 			t := time.Now()
 			fmt.Println(t)
 			fmt.Println(d)
+			panic("help")
 			return nil
 		},
 		Queue:   &q,
