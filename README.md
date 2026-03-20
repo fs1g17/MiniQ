@@ -25,3 +25,19 @@ this.work = work;
 }
 
 I'm not sure about the syntax 100% but maybe something like this. I'll give this a try now.
+
+### Reactivity
+
+Currently I'm making the worker poll the queue
+that's not a terribly good idea - how can I improve it?
+
+I was thinking about this approach:
+
+- queue gets a new job pushed
+- the QUEUE then checks whether any workers are currently working:
+  - if any worker is available, then we call `go worker.Perform(job)`
+  - if no workers are available, we do nothing
+  - then, when a worker finishes, check the queue once from INSIDE the worker
+  - this way, the workers and the queue can sleep and only react
+  - there could be a race condition if 2 workers check a queue while something is being enqueued,
+    which is currently empty, they sleep, but queue thinks they're both busy, can avoid by using mutex smartly
