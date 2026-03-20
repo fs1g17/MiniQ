@@ -9,7 +9,7 @@ const (
 	Failed
 )
 
-var statusName = map[JobStatus]string{
+var jobStatusName = map[JobStatus]string{
 	Queued:     "queued",
 	Processing: "processing",
 	Completed:  "completed",
@@ -17,7 +17,7 @@ var statusName = map[JobStatus]string{
 }
 
 func (js JobStatus) String() string {
-	return statusName[js]
+	return jobStatusName[js]
 }
 
 type Job[T any] struct {

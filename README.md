@@ -41,3 +41,10 @@ I was thinking about this approach:
   - this way, the workers and the queue can sleep and only react
   - there could be a race condition if 2 workers check a queue while something is being enqueued,
     which is currently empty, they sleep, but queue thinks they're both busy, can avoid by using mutex smartly
+
+what's a good way of tying that stuff in together?
+i want a "knock-on" effect to be triggered when something is enqueued in the queue - are there events in go?
+welp apparently folks are using messaging queues for events - LOL
+i guess there's nothing wrong in making the queue do the checking for now
+that does mean the queue is kinda coupled to the workers
+i'll do it this way and think about a better approach in the meantime

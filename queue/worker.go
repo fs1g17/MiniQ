@@ -5,11 +5,28 @@ import (
 	"time"
 )
 
+type WorkerStatus int
+
+const (
+	Busy WorkerStatus = iota
+	Idle
+)
+
+var workerStatusName = map[WorkerStatus]string{
+	Busy: "busy",
+	Idle: "idle",
+}
+
+func (ws WorkerStatus) String() string {
+	return workerStatusName[ws]
+}
+
 type Worker[T any] struct {
 	ID      int
 	Work    func(T) error
 	Queue   *Queue[T]
 	Channel chan string
+	Status  WorkerStatus
 }
 
 func (w *Worker[T]) Perform() {
