@@ -15,6 +15,37 @@ func main() {
 
 	q := queue.Queue[MyData]{}
 
+	messages := make(chan string)
+
+	worker0 := queue.Worker[MyData]{
+		ID:     0,
+		Status: queue.Idle,
+		Work: func(d MyData) error {
+			time.Sleep(5 * time.Second)
+			t := time.Now()
+			fmt.Println(t)
+			fmt.Println(d)
+			return nil
+		},
+		Queue:   &q,
+		Channel: messages,
+	}
+	worker1 := queue.Worker[MyData]{
+		ID:     1,
+		Status: queue.Idle,
+		Work: func(d MyData) error {
+			time.Sleep(5 * time.Second)
+			t := time.Now()
+			fmt.Println(t)
+			fmt.Println(d)
+			return nil
+		},
+		Queue:   &q,
+		Channel: messages,
+	}
+
+	q.Workers = append(q.Workers, &worker0, &worker1)
+
 	job1 := queue.Job[MyData]{
 		Name:   "job1",
 		Status: queue.Queued,
@@ -29,33 +60,14 @@ func main() {
 	q.Enqueue(&job1)
 	q.Enqueue(&job2)
 
-	messages := make(chan string)
-
-	worker0 := queue.Worker[MyData]{
-		ID: 0,
-		Work: func(d MyData) error {
-			t := time.Now()
-			fmt.Println(t)
-			fmt.Println(d)
-			return nil
-		},
-		Queue:   &q,
-		Channel: messages,
-	}
-	worker1 := queue.Worker[MyData]{
-		ID: 1,
-		Work: func(d MyData) error {
-			t := time.Now()
-			fmt.Println(t)
-			fmt.Println(d)
-			return nil
-		},
-		Queue:   &q,
-		Channel: messages,
-	}
-
-	go worker0.Perform()
-	go worker1.Perform()
+	go func() {
+		time.Sleep(8 * time.Second)
+		q.Enqueue(&queue.Job[MyData]{
+			Name:   "job3",
+			Status: queue.Queued,
+			Data:   MyData{A: 5, B: 6},
+		})
+	}()
 
 	for {
 		msg := <-messages

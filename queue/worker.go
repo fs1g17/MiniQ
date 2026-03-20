@@ -2,7 +2,6 @@ package queue
 
 import (
 	"fmt"
-	"time"
 )
 
 type WorkerStatus int
@@ -30,7 +29,13 @@ type Worker[T any] struct {
 }
 
 func (w *Worker[T]) Perform() {
-	time.Sleep(200 * time.Millisecond)
+	w.Status = Busy
+	defer func() {
+		w.Status = Idle
+		// give control back to queue
+		w.Queue.Try()
+	}()
+
 	job := w.Queue.Dequeue()
 
 	defer func() {
@@ -38,7 +43,6 @@ func (w *Worker[T]) Perform() {
 			fmt.Printf("recovered worker %d jobName %s reason %v\n", w.ID, job.Name, r)
 			job.UpdateStatus(Failed)
 		}
-		w.Perform()
 	}()
 
 	if job == nil {

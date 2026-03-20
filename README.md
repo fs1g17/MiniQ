@@ -48,3 +48,10 @@ welp apparently folks are using messaging queues for events - LOL
 i guess there's nothing wrong in making the queue do the checking for now
 that does mean the queue is kinda coupled to the workers
 i'll do it this way and think about a better approach in the meantime
+
+so what if i keep the queue as the main controller
+
+- when a worker frees up, we notify the queue that a worker freed up
+- if there's jobs in the queue, the queue then invokes the worker
+- if theres no jobs, everything runs as is until all workers free up
+- as soon as a new job comes in, the queue assigns it to the first worker
