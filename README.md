@@ -55,3 +55,37 @@ so what if i keep the queue as the main controller
 - if there's jobs in the queue, the queue then invokes the worker
 - if theres no jobs, everything runs as is until all workers free up
 - as soon as a new job comes in, the queue assigns it to the first worker
+
+### Concurrently setting "busy"
+
+So I've noticed something.
+
+If I have a struct like the worker:
+
+type Worker struct {
+Status WorkerStatus
+mu sync.Mutex
+}
+
+even if i have some getters and setters that rely on the mutex:
+
+func (w \*Worker) SetStatus(ws WorkerStatus) {
+w.mu.Lock()
+defer w.mu.Unlock()
+w.Status = ws
+}
+
+func (w \*Worker) GetStatus() WorkerStatus {
+w.mu.Lock()
+defer w.mu.Unlock()
+return w.Status
+}
+
+I have to set the status in the thread that calls the goroutine
+if I have a perform function:
+
+func (w \*Worker) Perform() {
+w.SetStatus(Busy)
+}
+
+this doesn't make it concurrent - I had this example, I had 2 calls to miniQ.addJob - which looped over the Worker slice to find workers in the Idle state. But both times, it found worker0 - which is wrong. Setting the status in the calling thread was what fixed it. No idea why, gonna have to read about how goroutines are actually executed.
