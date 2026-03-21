@@ -2,6 +2,7 @@ package queue
 
 import (
 	"fmt"
+	"sync"
 )
 
 type WorkerStatus int
@@ -23,20 +24,29 @@ func (ws WorkerStatus) String() string {
 type Worker[T any] struct {
 	ID      int
 	Work    func(T) error
-	Queue   *Queue[T]
 	Channel chan string
 	Status  WorkerStatus
+	mu      sync.Mutex
 }
 
-func (w *Worker[T]) Perform() {
-	w.Status = Busy
-	defer func() {
-		w.Status = Idle
-		// give control back to queue
-		w.Queue.Try()
-	}()
+func (w *Worker[T]) SetStatus(ws WorkerStatus) {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	w.Status = ws
+}
 
-	job := w.Queue.Dequeue()
+func (w *Worker[T]) GetStatus() WorkerStatus {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	return w.Status
+}
+
+func (w *Worker[T]) Perform(job *Job[T], callback func()) {
+	w.SetStatus(Busy)
+	defer func() {
+		w.SetStatus(Idle)
+		callback()
+	}()
 
 	defer func() {
 		if r := recover(); r != nil {
@@ -44,11 +54,6 @@ func (w *Worker[T]) Perform() {
 			job.UpdateStatus(Failed)
 		}
 	}()
-
-	if job == nil {
-		w.Channel <- fmt.Sprintf("job was nil for worker %d", w.ID)
-		return
-	}
 
 	job.UpdateStatus(Processing)
 	w.Channel <- fmt.Sprintf("job %s initiated by worker %d", job.Name, w.ID)

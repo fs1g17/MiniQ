@@ -13,56 +13,32 @@ func main() {
 		B int
 	}
 
-	q := queue.Queue[MyData]{}
-
 	messages := make(chan string)
 
-	worker0 := queue.Worker[MyData]{
-		ID:     0,
-		Status: queue.Idle,
-		Work: func(d MyData) error {
-			time.Sleep(5 * time.Second)
-			t := time.Now()
-			fmt.Println(t)
-			fmt.Println(d)
-			return nil
-		},
-		Queue:   &q,
-		Channel: messages,
-	}
-	worker1 := queue.Worker[MyData]{
-		ID:     1,
-		Status: queue.Idle,
-		Work: func(d MyData) error {
-			time.Sleep(5 * time.Second)
-			t := time.Now()
-			fmt.Println(t)
-			fmt.Println(d)
-			return nil
-		},
-		Queue:   &q,
-		Channel: messages,
-	}
+	miniQ := queue.CreateMiniQ[MyData]()
+	miniQ.AddWorker(func(data MyData) error {
+		messages <- fmt.Sprint(data)
+		return nil
+	}, messages)
+	miniQ.AddWorker(func(data MyData) error {
+		messages <- fmt.Sprint(data)
+		return nil
+	}, messages)
 
-	q.Workers = append(q.Workers, &worker0, &worker1)
-
-	job1 := queue.Job[MyData]{
+	miniQ.AddJob(&queue.Job[MyData]{
 		Name:   "job1",
 		Status: queue.Queued,
 		Data:   MyData{A: 1, B: 2},
-	}
-	job2 := queue.Job[MyData]{
+	})
+	miniQ.AddJob(&queue.Job[MyData]{
 		Name:   "job2",
 		Status: queue.Queued,
 		Data:   MyData{A: 3, B: 4},
-	}
-
-	q.Enqueue(&job1)
-	q.Enqueue(&job2)
+	})
 
 	go func() {
 		time.Sleep(8 * time.Second)
-		q.Enqueue(&queue.Job[MyData]{
+		miniQ.AddJob(&queue.Job[MyData]{
 			Name:   "job3",
 			Status: queue.Queued,
 			Data:   MyData{A: 5, B: 6},

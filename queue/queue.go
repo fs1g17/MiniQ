@@ -3,53 +3,26 @@ package queue
 import "sync"
 
 type Queue[T any] struct {
-	Jobs    []*Job[T]
-	mu      sync.Mutex
-	Workers []*Worker[T]
+	jobs []*Job[T]
+	mu   sync.Mutex
 }
 
-func (q *Queue[T]) tryQueue() {
-	numberJobs := len(q.Jobs)
-	q.mu.Unlock()
-	// no jobs to process
-	if (numberJobs) == 0 {
-		return
-	}
-	// there are jobs, look for available worker
-	var availableWorker *Worker[T] = nil
-	for _, worker := range q.Workers {
-		if worker.Status == Busy {
-			continue
-		}
-		availableWorker = worker
-		break
-	}
-	if availableWorker != nil {
-		go availableWorker.Perform()
-	}
-}
-
-func (q *Queue[T]) Try() {
+func (q *Queue[T]) enqueue(job *Job[T]) {
 	q.mu.Lock()
-	defer q.tryQueue()
+	defer q.mu.Unlock()
+	q.jobs = append(q.jobs, job)
 }
 
-func (q *Queue[T]) Enqueue(job *Job[T]) {
-	q.mu.Lock()
-	defer q.tryQueue()
-	q.Jobs = append(q.Jobs, job)
-}
-
-func (q *Queue[T]) Dequeue() *Job[T] {
+func (q *Queue[T]) dequeue() *Job[T] {
 	q.mu.Lock()
 	defer q.mu.Unlock()
 
-	if len(q.Jobs) == 0 {
+	if len(q.jobs) == 0 {
 		return nil
 	}
 
-	job := q.Jobs[0]
-	q.Jobs = q.Jobs[1:]
+	job := q.jobs[0]
+	q.jobs = q.jobs[1:]
 
 	return job
 }
