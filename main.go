@@ -25,24 +25,15 @@ func main() {
 		return nil
 	})
 
-	miniQ.AddJob(&queue.Job[MyData]{
-		Name:   "job0",
-		Status: queue.Queued,
-		Data:   MyData{A: 1, B: 2},
-	})
-	miniQ.AddJob(&queue.Job[MyData]{
-		Name:   "job1",
-		Status: queue.Queued,
-		Data:   MyData{A: 3, B: 4},
-	})
+	job0 := "job0"
+	miniQ.AddJob(queue.NewJob(MyData{A: 1, B: 2}, &job0))
+	job1 := "job1"
+	miniQ.AddJob(queue.NewJob(MyData{A: 3, B: 4}, &job1))
 
 	go func() {
 		time.Sleep(12 * time.Second)
-		miniQ.AddJob(&queue.Job[MyData]{
-			Name:   "job2",
-			Status: queue.Queued,
-			Data:   MyData{A: 5, B: 6},
-		})
+		job2 := "job2"
+		miniQ.AddJob(queue.NewJob(MyData{A: 5, B: 6}, &job2))
 	}()
 
 	for {
