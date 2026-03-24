@@ -4,14 +4,24 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/fs1g17/MiniQ/persistence"
+	"github.com/fs1g17/MiniQ/migrations"
 	"github.com/fs1g17/MiniQ/queue"
+	"github.com/fs1g17/MiniQ/store"
 	"github.com/joho/godotenv"
 )
 
 func setup() {
 	godotenv.Load()
-	persistence.GetConnection()
+	fmt.Println(store.GetConnectionString())
+	pgDB, err := store.Open()
+	if err != nil {
+		panic("not connected to db")
+	}
+
+	err = store.MigrateFs(pgDB, migrations.FS, ".")
+	if err != nil {
+		panic(err)
+	}
 }
 
 func main() {
