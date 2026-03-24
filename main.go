@@ -13,40 +13,40 @@ func main() {
 		B int
 	}
 
-	messages := make(chan string)
+	log := make(chan string)
 
-	miniQ := queue.CreateMiniQ[MyData]()
+	miniQ := queue.CreateMiniQ[MyData](log)
 	miniQ.AddWorker(func(data MyData) error {
-		messages <- fmt.Sprint(data)
+		log <- fmt.Sprint(data)
 		return nil
-	}, messages)
+	})
 	miniQ.AddWorker(func(data MyData) error {
-		messages <- fmt.Sprint(data)
+		log <- fmt.Sprint(data)
 		return nil
-	}, messages)
+	})
 
 	miniQ.AddJob(&queue.Job[MyData]{
-		Name:   "job1",
+		Name:   "job0",
 		Status: queue.Queued,
 		Data:   MyData{A: 1, B: 2},
 	})
 	miniQ.AddJob(&queue.Job[MyData]{
-		Name:   "job2",
+		Name:   "job1",
 		Status: queue.Queued,
 		Data:   MyData{A: 3, B: 4},
 	})
 
 	go func() {
-		time.Sleep(8 * time.Second)
+		time.Sleep(12 * time.Second)
 		miniQ.AddJob(&queue.Job[MyData]{
-			Name:   "job3",
+			Name:   "job2",
 			Status: queue.Queued,
 			Data:   MyData{A: 5, B: 6},
 		})
 	}()
 
 	for {
-		msg := <-messages
-		fmt.Println(msg)
+		msg := <-log
+		fmt.Println("LOG:", msg)
 	}
 }
