@@ -41,11 +41,11 @@ func (w *Worker[T]) GetStatus() WorkerStatus {
 	return w.Status
 }
 
-func (w *Worker[T]) Perform(job *Job[T], callback func()) {
+func (w *Worker[T]) Perform(job *Job[T]) {
 	w.SetStatus(Busy)
 	defer func() {
 		w.SetStatus(Idle)
-		callback()
+		w.Channel <- fmt.Sprintf("WORKER_FREED: %d", w.ID)
 	}()
 
 	defer func() {
