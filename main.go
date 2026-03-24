@@ -4,10 +4,19 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/fs1g17/MiniQ/persistence"
 	"github.com/fs1g17/MiniQ/queue"
+	"github.com/joho/godotenv"
 )
 
+func setup() {
+	godotenv.Load()
+	persistence.GetConnection()
+}
+
 func main() {
+	setup()
+
 	type MyData struct {
 		A int
 		B int
