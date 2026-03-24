@@ -13,15 +13,15 @@ func main() {
 		B int
 	}
 
-	messages := make(chan string)
+	log := make(chan string)
 
-	miniQ := queue.CreateMiniQ[MyData](messages)
+	miniQ := queue.CreateMiniQ[MyData](log)
 	miniQ.AddWorker(func(data MyData) error {
-		messages <- fmt.Sprint(data)
+		log <- fmt.Sprint(data)
 		return nil
 	})
 	miniQ.AddWorker(func(data MyData) error {
-		messages <- fmt.Sprint(data)
+		log <- fmt.Sprint(data)
 		return nil
 	})
 
@@ -46,7 +46,7 @@ func main() {
 	}()
 
 	for {
-		msg := <-messages
-		fmt.Println(msg)
+		msg := <-log
+		fmt.Println("LOG:", msg)
 	}
 }

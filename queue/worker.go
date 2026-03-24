@@ -22,11 +22,12 @@ func (ws WorkerStatus) String() string {
 }
 
 type Worker[T any] struct {
-	ID      int
-	Work    func(T) error
-	Channel chan string
-	Status  WorkerStatus
-	mu      sync.Mutex
+	ID         int
+	Work       func(T) error
+	LogChannel chan string
+	JobChannel chan string
+	Status     WorkerStatus
+	mu         sync.Mutex
 }
 
 func (w *Worker[T]) SetStatus(ws WorkerStatus) {
@@ -45,7 +46,7 @@ func (w *Worker[T]) Perform(job *Job[T]) {
 	w.SetStatus(Busy)
 	defer func() {
 		w.SetStatus(Idle)
-		w.Channel <- fmt.Sprintf("WORKER_FREED: %d", w.ID)
+		w.JobChannel <- fmt.Sprintf("WORKER_FREED: %d", w.ID)
 	}()
 
 	defer func() {
@@ -56,7 +57,7 @@ func (w *Worker[T]) Perform(job *Job[T]) {
 	}()
 
 	job.UpdateStatus(Processing)
-	w.Channel <- fmt.Sprintf("job %s initiated by worker %d", job.Name, w.ID)
+	w.LogChannel <- fmt.Sprintf("job %s initiated by worker %d", job.Name, w.ID)
 	err := w.Work(job.Data)
 	if err != nil {
 		job.UpdateStatus(Failed)

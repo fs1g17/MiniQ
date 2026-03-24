@@ -6,18 +6,22 @@ import (
 )
 
 type MiniQ[T any] struct {
-	workers []*Worker[T]
-	queue   *Queue[T]
-	channel chan string
+	workers    []*Worker[T]
+	queue      *Queue[T]
+	logChannel chan string
+	jobChannel chan string
 }
 
-func CreateMiniQ[T any](channel chan string) *MiniQ[T] {
+func CreateMiniQ[T any](logChannel chan string) *MiniQ[T] {
+	jobChannel := make(chan string)
+
 	miniQ := MiniQ[T]{
 		workers: []*Worker[T]{},
 		queue: &Queue[T]{
 			jobs: []*Job[T]{},
 		},
-		channel: channel,
+		logChannel: logChannel,
+		jobChannel: jobChannel,
 	}
 
 	go miniQ.Listen()
@@ -47,8 +51,8 @@ func (wp *MiniQ[T]) findFirstAvailableWorker() {
 
 func (wp *MiniQ[T]) Listen() {
 	for {
-		msg := <-wp.channel
-		fmt.Println("HERE", msg)
+		msg := <-wp.jobChannel
+		fmt.Println("JOB:", msg)
 		if strings.Contains(msg, "WORKER_FREED") {
 			wp.findFirstAvailableWorker()
 		}
@@ -60,14 +64,15 @@ func (wp *MiniQ[T]) Listen() {
 
 func (wp *MiniQ[T]) AddJob(job *Job[T]) {
 	wp.queue.enqueue(job)
-	wp.channel <- fmt.Sprintf("JOB_ADDED: %s", job.Name)
+	wp.jobChannel <- fmt.Sprintf("JOB_ADDED: %s", job.Name)
 }
 
 func (wp *MiniQ[T]) AddWorker(work func(T) error) {
 	wp.workers = append(wp.workers, &Worker[T]{
-		ID:      len(wp.workers),
-		Work:    work,
-		Channel: wp.channel,
-		Status:  Idle,
+		ID:         len(wp.workers),
+		Work:       work,
+		LogChannel: wp.logChannel,
+		JobChannel: wp.jobChannel,
+		Status:     Idle,
 	})
 }
