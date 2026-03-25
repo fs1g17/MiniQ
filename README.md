@@ -89,3 +89,21 @@ w.SetStatus(Busy)
 }
 
 this doesn't make it concurrent - I had this example, I had 2 calls to miniQ.addJob - which looped over the Worker slice to find workers in the Idle state. But both times, it found worker0 - which is wrong. Setting the status in the calling thread was what fixed it. No idea why, gonna have to read about how goroutines are actually executed.
+
+### How Goroutines are executed
+
+Now there's this big fancy G,M,P model
+G: goroutine
+M: machine (OS thread)
+P: processor (but easier to think of as Permission)
+
+Goroutines are lightweight abstractions over threads, there can be any number of them.
+M: there can also be any number of them
+P: theres GOPROCMAX limit of them - folks say it's typically set to the number of cores of a processor
+
+M can be interrupted when executing a goroutine (to do some syscall, like I/O), at which point they free up the P for other Ms to execute their goroutines.
+
+the reason I ran into the above issue, was because:
+
+- when I'm looping over the available workers, if I set the worker status inside `Perform` function, but `Perform` is invoked with the `go` keyword, I have no control WHEN it will actually execute
+- setting the worker as `Busy` in the calling thread IS the solution, because we know that the next loop WILL DEFINITELY see that the current worker IS BUSY.
