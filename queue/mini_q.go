@@ -3,22 +3,26 @@ package queue
 import (
 	"fmt"
 	"strings"
+
+	"github.com/fs1g17/MiniQ/store"
 )
 
-type MiniQ[T any] struct {
-	workers    []*Worker[T]
-	queue      *Queue[T]
+type MiniQ struct {
+	jobStore   *store.JobStore
+	workers    []*Worker
+	queue      *Queue
 	logChannel chan string
 	jobChannel chan string
 }
 
-func CreateMiniQ[T any](logChannel chan string) *MiniQ[T] {
+func CreateMiniQ(jobStore *store.JobStore, logChannel chan string) *MiniQ {
 	jobChannel := make(chan string)
 
-	miniQ := MiniQ[T]{
-		workers: []*Worker[T]{},
-		queue: &Queue[T]{
-			jobs: []*Job[T]{},
+	miniQ := MiniQ{
+		jobStore: jobStore,
+		workers:  []*Worker{},
+		queue: &Queue{
+			jobs: []*store.Job{},
 		},
 		logChannel: logChannel,
 		jobChannel: jobChannel,
@@ -28,13 +32,13 @@ func CreateMiniQ[T any](logChannel chan string) *MiniQ[T] {
 	return &miniQ
 }
 
-func (wp *MiniQ[T]) findFirstAvailableWorker() {
+func (wp *MiniQ) findFirstAvailableWorker() {
 	job := wp.queue.dequeue()
 	if job == nil {
 		return // no jobs
 	}
 
-	var availableWorker *Worker[T] = nil
+	var availableWorker *Worker = nil
 	for _, worker := range wp.workers {
 
 		if workerStatus := worker.GetStatus(); workerStatus == Busy {
@@ -49,7 +53,7 @@ func (wp *MiniQ[T]) findFirstAvailableWorker() {
 	}
 }
 
-func (wp *MiniQ[T]) Listen() {
+func (wp *MiniQ) Listen() {
 	for {
 		msg := <-wp.jobChannel
 		fmt.Println("JOB:", msg)
@@ -62,13 +66,21 @@ func (wp *MiniQ[T]) Listen() {
 	}
 }
 
-func (wp *MiniQ[T]) AddJob(job *Job[T]) {
-	wp.queue.enqueue(job)
-	wp.jobChannel <- fmt.Sprintf("JOB_ADDED: %s", job.Name)
+func (wp *MiniQ) AddJob(data *store.AnyData) error {
+	job := store.Job{
+		Data: *data,
+	}
+	err := wp.jobStore.InsertJob(&job)
+	if err != nil {
+		return err
+	}
+	wp.queue.enqueue(&job)
+	wp.jobChannel <- fmt.Sprintf("JOB_ADDED: %d", job.ID)
+	return nil
 }
 
-func (wp *MiniQ[T]) AddWorker(work func(T) error) {
-	wp.workers = append(wp.workers, &Worker[T]{
+func (wp *MiniQ) AddWorker(work func(store.AnyData) error) {
+	wp.workers = append(wp.workers, &Worker{
 		ID:         len(wp.workers),
 		Work:       work,
 		LogChannel: wp.logChannel,
