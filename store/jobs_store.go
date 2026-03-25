@@ -112,6 +112,21 @@ func (js *JobStore) InsertJob(job *Job) error {
 	return nil
 }
 
+func (js *JobStore) UpdateJobStatus(jobId int, jobStatus JobStatus) error {
+	query := `
+	UPDATE jobs
+	SET jobStatus = $1 
+	WHERE id = $2;
+	`
+
+	_, err := js.db.Exec(query, jobStatus.String(), jobId)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func (js *JobStore) GetJob(id int) (*Job, error) {
 	query := `
 	SELECT id, status, data, attempts
