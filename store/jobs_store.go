@@ -5,6 +5,7 @@ import (
 	"database/sql/driver"
 	"encoding/json"
 	"errors"
+	"time"
 )
 
 type AnyData map[string]any
@@ -72,10 +73,11 @@ func GetJobStatus(status string) (JobStatus, error) {
 }
 
 type Job struct {
-	ID       int
-	Status   JobStatus
-	Data     AnyData
-	Attempts int
+	ID        int
+	Status    JobStatus
+	Data      AnyData
+	Attempts  int
+	CreatedAt time.Time
 }
 
 func (j *Job) UpdateStatus(js JobStatus) {
