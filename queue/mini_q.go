@@ -7,17 +7,17 @@ import (
 	"github.com/fs1g17/MiniQ/store"
 )
 
-type MiniQ[T any] struct {
+type MiniQ struct {
 	workers    []*Worker
 	queue      *Queue
 	logChannel chan string
 	jobChannel chan string
 }
 
-func CreateMiniQ[T any](logChannel chan string) *MiniQ[T] {
+func CreateMiniQ(logChannel chan string) *MiniQ {
 	jobChannel := make(chan string)
 
-	miniQ := MiniQ[T]{
+	miniQ := MiniQ{
 		workers: []*Worker{},
 		queue: &Queue{
 			jobs: []*store.Job{},
@@ -30,7 +30,7 @@ func CreateMiniQ[T any](logChannel chan string) *MiniQ[T] {
 	return &miniQ
 }
 
-func (wp *MiniQ[T]) findFirstAvailableWorker() {
+func (wp *MiniQ) findFirstAvailableWorker() {
 	job := wp.queue.dequeue()
 	if job == nil {
 		return // no jobs
@@ -51,7 +51,7 @@ func (wp *MiniQ[T]) findFirstAvailableWorker() {
 	}
 }
 
-func (wp *MiniQ[T]) Listen() {
+func (wp *MiniQ) Listen() {
 	for {
 		msg := <-wp.jobChannel
 		fmt.Println("JOB:", msg)
@@ -64,12 +64,12 @@ func (wp *MiniQ[T]) Listen() {
 	}
 }
 
-func (wp *MiniQ[T]) AddJob(job *store.Job) {
+func (wp *MiniQ) AddJob(job *store.Job) {
 	wp.queue.enqueue(job)
 	wp.jobChannel <- fmt.Sprintf("JOB_ADDED: %d", job.ID)
 }
 
-func (wp *MiniQ[T]) AddWorker(work func(store.AnyData) error) {
+func (wp *MiniQ) AddWorker(work func(store.AnyData) error) {
 	wp.workers = append(wp.workers, &Worker{
 		ID:         len(wp.workers),
 		Work:       work,

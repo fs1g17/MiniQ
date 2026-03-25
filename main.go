@@ -3,7 +3,9 @@ package main
 import (
 	"database/sql"
 	"fmt"
+	"time"
 
+	"github.com/fs1g17/MiniQ/queue"
 	"github.com/fs1g17/MiniQ/store"
 	"github.com/joho/godotenv"
 )
@@ -20,64 +22,56 @@ func setup() *sql.DB {
 
 func main() {
 	pgDB := setup()
-
-	type MyData struct {
-		A int
-		B int
-	}
+	log := make(chan string)
 
 	jobStore := store.NewJobStore(pgDB)
-	job := store.Job{
+
+	miniQ := queue.CreateMiniQ(log)
+	miniQ.AddWorker(func(data store.AnyData) error {
+		log <- fmt.Sprint(data)
+		return nil
+	})
+	miniQ.AddWorker(func(data store.AnyData) error {
+		log <- fmt.Sprint(data)
+		return nil
+	})
+
+	job0 := &store.Job{
 		Data: store.AnyData{"A": 1, "B": 2},
 	}
-	err := jobStore.InsertJob(&job)
+	job1 := &store.Job{
+		Data: store.AnyData{"A": 3, "B": 4},
+	}
+	err := jobStore.InsertJob(job0)
 	if err != nil {
-		fmt.Println("Failed to insert job")
+		fmt.Println("Failed to add job")
+		return
+	}
+	err = jobStore.InsertJob(job1)
+	if err != nil {
+		fmt.Println("Failed to add job")
 		return
 	}
 
-	job2, err := jobStore.GetJob(job.ID)
-	if err != nil {
-		fmt.Println("failed to get job")
-		return
-	}
+	miniQ.AddJob(job0)
+	miniQ.AddJob(job1)
 
-	fmt.Printf("ID %d\n", job2.ID)
-	fmt.Printf("Status %d\n", job2.Status)
-	fmt.Printf("Data %v\n", job2.Data)
-	fmt.Printf("Attempts %d\n", job2.Attempts)
+	go func() {
+		time.Sleep(12 * time.Second)
+		job2 := &store.Job{
+			Data: store.AnyData{"A": 5, "B": 6},
+		}
+		err = jobStore.InsertJob(job2)
+		if err != nil {
+			fmt.Println("Failed to add job")
+			return
+		}
+
+		miniQ.AddJob(job2)
+	}()
+
+	for {
+		msg := <-log
+		fmt.Println("LOG:", msg)
+	}
 }
-
-// func main2() {
-// 	setup()
-
-// 	type MyData struct {
-// 		A int
-// 		B int
-// 	}
-
-// 	log := make(chan string)
-
-// 	miniQ := queue.CreateMiniQ[MyData](log)
-// 	miniQ.AddWorker(func(data MyData) error {
-// 		log <- fmt.Sprint(data)
-// 		return nil
-// 	})
-// 	miniQ.AddWorker(func(data MyData) error {
-// 		log <- fmt.Sprint(data)
-// 		return nil
-// 	})
-
-// 	miniQ.AddJob(queue.NewJob(MyData{A: 1, B: 2}))
-// 	miniQ.AddJob(queue.NewJob(MyData{A: 3, B: 4}))
-
-// 	go func() {
-// 		time.Sleep(12 * time.Second)
-// 		miniQ.AddJob(queue.NewJob(MyData{A: 5, B: 6}))
-// 	}()
-
-// 	for {
-// 		msg := <-log
-// 		fmt.Println("LOG:", msg)
-// 	}
-// }
