@@ -64,7 +64,7 @@ func (wp *MiniQ[T]) Listen() {
 
 func (wp *MiniQ[T]) AddJob(job *Job[T]) {
 	wp.queue.enqueue(job)
-	wp.jobChannel <- fmt.Sprintf("JOB_ADDED: %s", job.Name)
+	wp.jobChannel <- fmt.Sprintf("JOB_ADDED: %d", job.ID)
 }
 
 func (wp *MiniQ[T]) AddWorker(work func(T) error) {

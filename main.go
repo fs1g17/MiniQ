@@ -1,30 +1,54 @@
 package main
 
 import (
+	"database/sql"
 	"fmt"
 	"time"
 
-	"github.com/fs1g17/MiniQ/migrations"
 	"github.com/fs1g17/MiniQ/queue"
 	"github.com/fs1g17/MiniQ/store"
 	"github.com/joho/godotenv"
 )
 
-func setup() {
+func setup() *sql.DB {
 	godotenv.Load()
 	fmt.Println(store.GetConnectionString())
 	pgDB, err := store.Open()
 	if err != nil {
 		panic("not connected to db")
 	}
-
-	err = store.MigrateFs(pgDB, migrations.FS, ".")
-	if err != nil {
-		panic(err)
-	}
+	return pgDB
 }
 
 func main() {
+	pgDB := setup()
+
+	type MyData struct {
+		A int
+		B int
+	}
+
+	jobStore := store.NewJobStore[MyData](pgDB)
+	job := queue.NewJob(MyData{A: 1, B: 2})
+	err := jobStore.InsertJob(job)
+	if err != nil {
+		fmt.Println("Failed to insert job")
+		return
+	}
+
+	job2, err := jobStore.GetJob(job.ID)
+	if err != nil {
+		fmt.Println("failed to get job")
+		return
+	}
+
+	fmt.Printf("ID %d\n", job2.ID)
+	fmt.Printf("Status %d\n", job2.Status)
+	fmt.Printf("Data %v\n", job2.Data)
+	fmt.Printf("Attempts %d\n", job2.Attempts)
+}
+
+func main2() {
 	setup()
 
 	type MyData struct {
@@ -44,15 +68,12 @@ func main() {
 		return nil
 	})
 
-	job0 := "job0"
-	miniQ.AddJob(queue.NewJob(MyData{A: 1, B: 2}, &job0))
-	job1 := "job1"
-	miniQ.AddJob(queue.NewJob(MyData{A: 3, B: 4}, &job1))
+	miniQ.AddJob(queue.NewJob(MyData{A: 1, B: 2}))
+	miniQ.AddJob(queue.NewJob(MyData{A: 3, B: 4}))
 
 	go func() {
 		time.Sleep(12 * time.Second)
-		job2 := "job2"
-		miniQ.AddJob(queue.NewJob(MyData{A: 5, B: 6}, &job2))
+		miniQ.AddJob(queue.NewJob(MyData{A: 5, B: 6}))
 	}()
 
 	for {

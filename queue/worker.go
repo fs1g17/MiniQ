@@ -51,13 +51,13 @@ func (w *Worker[T]) Perform(job *Job[T]) {
 
 	defer func() {
 		if r := recover(); r != nil {
-			fmt.Printf("recovered worker %d jobName %s reason %v\n", w.ID, job.Name, r)
+			fmt.Printf("recovered worker %d jobID %d reason %v\n", w.ID, job.ID, r)
 			job.UpdateStatus(Failed)
 		}
 	}()
 
 	job.UpdateStatus(Processing)
-	w.LogChannel <- fmt.Sprintf("job %s initiated by worker %d", job.Name, w.ID)
+	w.LogChannel <- fmt.Sprintf("job %d initiated by worker %d", job.ID, w.ID)
 	err := w.Work(job.Data)
 	if err != nil {
 		job.UpdateStatus(Failed)

@@ -1,8 +1,10 @@
 package queue
 
-import "github.com/google/uuid"
+import "errors"
 
 type JobStatus int
+
+var errInvalidJobStatus = errors.New("error string is invalid")
 
 const (
 	Queued JobStatus = iota
@@ -22,8 +24,23 @@ func (js JobStatus) String() string {
 	return jobStatusName[js]
 }
 
+func GetJobStatus(status string) (JobStatus, error) {
+	switch status {
+	case "queued":
+		return Queued, nil
+	case "processing":
+		return Processing, nil
+	case "completed":
+		return Completed, nil
+	case "failed":
+		return Failed, nil
+	default:
+		return Queued, errInvalidJobStatus
+	}
+}
+
 type Job[T any] struct {
-	Name     string
+	ID       int
 	Status   JobStatus
 	Data     T
 	Attempts int
@@ -33,15 +50,8 @@ func (j *Job[T]) UpdateStatus(js JobStatus) {
 	j.Status = js
 }
 
-func NewJob[T any](data T, name *string) *Job[T] {
-	var realName string
-	if name != nil {
-		realName = *name
-	} else {
-		realName = uuid.NewString()
-	}
+func NewJob[T any](data T) *Job[T] {
 	return &Job[T]{
-		Name:     realName,
 		Status:   Queued,
 		Data:     data,
 		Attempts: 0,
