@@ -3,6 +3,8 @@ package queue
 import (
 	"fmt"
 	"sync"
+
+	"github.com/fs1g17/MiniQ/store"
 )
 
 type WorkerStatus int
@@ -21,28 +23,28 @@ func (ws WorkerStatus) String() string {
 	return workerStatusName[ws]
 }
 
-type Worker[T any] struct {
+type Worker struct {
 	ID         int
-	Work       func(T) error
+	Work       func(store.AnyData) error
 	LogChannel chan string
 	JobChannel chan string
 	Status     WorkerStatus
 	mu         sync.Mutex
 }
 
-func (w *Worker[T]) SetStatus(ws WorkerStatus) {
+func (w *Worker) SetStatus(ws WorkerStatus) {
 	w.mu.Lock()
 	defer w.mu.Unlock()
 	w.Status = ws
 }
 
-func (w *Worker[T]) GetStatus() WorkerStatus {
+func (w *Worker) GetStatus() WorkerStatus {
 	w.mu.Lock()
 	defer w.mu.Unlock()
 	return w.Status
 }
 
-func (w *Worker[T]) Perform(job *Job[T]) {
+func (w *Worker) Perform(job *store.Job) {
 	w.SetStatus(Busy)
 	defer func() {
 		w.SetStatus(Idle)
@@ -52,16 +54,16 @@ func (w *Worker[T]) Perform(job *Job[T]) {
 	defer func() {
 		if r := recover(); r != nil {
 			fmt.Printf("recovered worker %d jobID %d reason %v\n", w.ID, job.ID, r)
-			job.UpdateStatus(Failed)
+			job.UpdateStatus(store.Failed)
 		}
 	}()
 
-	job.UpdateStatus(Processing)
+	job.UpdateStatus(store.Processing)
 	w.LogChannel <- fmt.Sprintf("job %d initiated by worker %d", job.ID, w.ID)
 	err := w.Work(job.Data)
 	if err != nil {
-		job.UpdateStatus(Failed)
+		job.UpdateStatus(store.Failed)
 	} else {
-		job.UpdateStatus(Completed)
+		job.UpdateStatus(store.Completed)
 	}
 }

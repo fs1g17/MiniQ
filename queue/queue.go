@@ -1,19 +1,23 @@
 package queue
 
-import "sync"
+import (
+	"sync"
 
-type Queue[T any] struct {
-	jobs []*Job[T]
+	"github.com/fs1g17/MiniQ/store"
+)
+
+type Queue struct {
+	jobs []*store.Job
 	mu   sync.Mutex
 }
 
-func (q *Queue[T]) enqueue(job *Job[T]) {
+func (q *Queue) enqueue(job *store.Job) {
 	q.mu.Lock()
 	defer q.mu.Unlock()
 	q.jobs = append(q.jobs, job)
 }
 
-func (q *Queue[T]) dequeue() *Job[T] {
+func (q *Queue) dequeue() *store.Job {
 	q.mu.Lock()
 	defer q.mu.Unlock()
 

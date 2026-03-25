@@ -3,9 +3,7 @@ package main
 import (
 	"database/sql"
 	"fmt"
-	"time"
 
-	"github.com/fs1g17/MiniQ/queue"
 	"github.com/fs1g17/MiniQ/store"
 	"github.com/joho/godotenv"
 )
@@ -28,9 +26,11 @@ func main() {
 		B int
 	}
 
-	jobStore := store.NewJobStore[MyData](pgDB)
-	job := queue.NewJob(MyData{A: 1, B: 2})
-	err := jobStore.InsertJob(job)
+	jobStore := store.NewJobStore(pgDB)
+	job := store.Job{
+		Data: store.AnyData{"A": 1, "B": 2},
+	}
+	err := jobStore.InsertJob(&job)
 	if err != nil {
 		fmt.Println("Failed to insert job")
 		return
@@ -48,36 +48,36 @@ func main() {
 	fmt.Printf("Attempts %d\n", job2.Attempts)
 }
 
-func main2() {
-	setup()
+// func main2() {
+// 	setup()
 
-	type MyData struct {
-		A int
-		B int
-	}
+// 	type MyData struct {
+// 		A int
+// 		B int
+// 	}
 
-	log := make(chan string)
+// 	log := make(chan string)
 
-	miniQ := queue.CreateMiniQ[MyData](log)
-	miniQ.AddWorker(func(data MyData) error {
-		log <- fmt.Sprint(data)
-		return nil
-	})
-	miniQ.AddWorker(func(data MyData) error {
-		log <- fmt.Sprint(data)
-		return nil
-	})
+// 	miniQ := queue.CreateMiniQ[MyData](log)
+// 	miniQ.AddWorker(func(data MyData) error {
+// 		log <- fmt.Sprint(data)
+// 		return nil
+// 	})
+// 	miniQ.AddWorker(func(data MyData) error {
+// 		log <- fmt.Sprint(data)
+// 		return nil
+// 	})
 
-	miniQ.AddJob(queue.NewJob(MyData{A: 1, B: 2}))
-	miniQ.AddJob(queue.NewJob(MyData{A: 3, B: 4}))
+// 	miniQ.AddJob(queue.NewJob(MyData{A: 1, B: 2}))
+// 	miniQ.AddJob(queue.NewJob(MyData{A: 3, B: 4}))
 
-	go func() {
-		time.Sleep(12 * time.Second)
-		miniQ.AddJob(queue.NewJob(MyData{A: 5, B: 6}))
-	}()
+// 	go func() {
+// 		time.Sleep(12 * time.Second)
+// 		miniQ.AddJob(queue.NewJob(MyData{A: 5, B: 6}))
+// 	}()
 
-	for {
-		msg := <-log
-		fmt.Println("LOG:", msg)
-	}
-}
+// 	for {
+// 		msg := <-log
+// 		fmt.Println("LOG:", msg)
+// 	}
+// }
