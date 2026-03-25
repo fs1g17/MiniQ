@@ -8,17 +8,19 @@ import (
 )
 
 type MiniQ struct {
+	jobStore   *store.JobStore
 	workers    []*Worker
 	queue      *Queue
 	logChannel chan string
 	jobChannel chan string
 }
 
-func CreateMiniQ(logChannel chan string) *MiniQ {
+func CreateMiniQ(jobStore *store.JobStore, logChannel chan string) *MiniQ {
 	jobChannel := make(chan string)
 
 	miniQ := MiniQ{
-		workers: []*Worker{},
+		jobStore: jobStore,
+		workers:  []*Worker{},
 		queue: &Queue{
 			jobs: []*store.Job{},
 		},
@@ -64,9 +66,17 @@ func (wp *MiniQ) Listen() {
 	}
 }
 
-func (wp *MiniQ) AddJob(job *store.Job) {
-	wp.queue.enqueue(job)
+func (wp *MiniQ) AddJob(data *store.AnyData) error {
+	job := store.Job{
+		Data: *data,
+	}
+	err := wp.jobStore.InsertJob(&job)
+	if err != nil {
+		return err
+	}
+	wp.queue.enqueue(&job)
 	wp.jobChannel <- fmt.Sprintf("JOB_ADDED: %d", job.ID)
+	return nil
 }
 
 func (wp *MiniQ) AddWorker(work func(store.AnyData) error) {

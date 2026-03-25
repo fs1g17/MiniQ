@@ -26,7 +26,7 @@ func main() {
 
 	jobStore := store.NewJobStore(pgDB)
 
-	miniQ := queue.CreateMiniQ(log)
+	miniQ := queue.CreateMiniQ(jobStore, log)
 	miniQ.AddWorker(func(data store.AnyData) error {
 		log <- fmt.Sprint(data)
 		return nil
@@ -36,38 +36,25 @@ func main() {
 		return nil
 	})
 
-	job0 := &store.Job{
-		Data: store.AnyData{"A": 1, "B": 2},
-	}
-	job1 := &store.Job{
-		Data: store.AnyData{"A": 3, "B": 4},
-	}
-	err := jobStore.InsertJob(job0)
+	err := miniQ.AddJob(&store.AnyData{"A": 1, "B": 2})
 	if err != nil {
-		fmt.Println("Failed to add job")
+		fmt.Errorf("Failed to add job %w", err)
 		return
 	}
-	err = jobStore.InsertJob(job1)
+	err = miniQ.AddJob(&store.AnyData{"A": 3, "B": 4})
 	if err != nil {
-		fmt.Println("Failed to add job")
+		fmt.Errorf("Failed to add job %w", err)
 		return
 	}
-
-	miniQ.AddJob(job0)
-	miniQ.AddJob(job1)
 
 	go func() {
 		time.Sleep(12 * time.Second)
-		job2 := &store.Job{
-			Data: store.AnyData{"A": 5, "B": 6},
-		}
-		err = jobStore.InsertJob(job2)
+
+		err = miniQ.AddJob(&store.AnyData{"A": 5, "B": 6})
 		if err != nil {
-			fmt.Println("Failed to add job")
+			fmt.Errorf("Failed to add job %w", err)
 			return
 		}
-
-		miniQ.AddJob(job2)
 	}()
 
 	for {
