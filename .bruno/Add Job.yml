@@ -1,0 +1,21 @@
+info:
+  name: Add Job
+  type: http
+  seq: 2
+
+http:
+  method: POST
+  url: http://localhost:8080/addJob
+  body:
+    type: json
+    data: |-
+      {
+        "data": { "A": 1, "B": 2 }
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

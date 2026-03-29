@@ -107,3 +107,21 @@ the reason I ran into the above issue, was because:
 
 - when I'm looping over the available workers, if I set the worker status inside `Perform` function, but `Perform` is invoked with the `go` keyword, I have no control WHEN it will actually execute
 - setting the worker as `Busy` in the calling thread IS the solution, because we know that the next loop WILL DEFINITELY see that the current worker IS BUSY.
+
+### Network Queue
+
+queue is only really useful in a distributed environment - locally on a single machine, a worker pool would otherwise suffice (if we wanna limit the number of workers as to not overload the current resources)
+
+queues shine when there is an unknown number of workers.
+
+so I'm thinking of doing this approach:
+
+- add a web interface for the actual queue
+- allow workers to "register" with the web interface
+- registering means exposing a POST endpoint that accepts some data and instantly returns 200, thus transitioning the job to "processing" state
+- once the job succeeds or fails, we ping the queue from the worker to notify of that
+- we do need a way of handling something, like workers falling over, but I'll add that later (maybe a timeout of sorts)
+- this will easily allow to implement retry logic
+- the queue then should have a list of registered workers, once a worker is busy, we remove it from workers list (essentially a list of endpoints)
+- once a worker finishes with work, we can "re-register" it with the queue
+- bob's your uncle (is that why he's called uncle bob?)
