@@ -73,11 +73,11 @@ func GetJobStatus(status string) (JobStatus, error) {
 }
 
 type Job struct {
-	ID        int
-	Status    JobStatus
-	Data      AnyData
-	Attempts  int
-	CreatedAt time.Time
+	ID        int       `json:"id"`
+	Status    JobStatus `json:"job_status"`
+	Data      AnyData   `json:"data"`
+	Attempts  int       `json:"attempts"`
+	CreatedAt time.Time `json:"created_at"`
 }
 
 func (j *Job) UpdateStatus(js JobStatus) {

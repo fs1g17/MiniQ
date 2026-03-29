@@ -46,3 +46,13 @@ func (h *QueueHandler) HandleAddJob(c *echo.Context) error {
 
 	return c.JSON(http.StatusOK, map[string]string{"message": "ok"})
 }
+
+func (h *QueueHandler) HandleGetJob(c *echo.Context) error {
+	job, err := h.miniq.GetJob()
+
+	if err != nil {
+		return c.JSON(http.StatusOK, map[string]any{"job": nil})
+	}
+
+	return c.JSON(http.StatusOK, map[string]any{"job": job})
+}

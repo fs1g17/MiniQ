@@ -1,8 +1,12 @@
 package queue
 
 import (
+	"errors"
+
 	"github.com/fs1g17/MiniQ/internal/store"
 )
+
+var errNoJobInQueue = errors.New("queue is empty")
 
 type MiniQ struct {
 	jobStore *store.JobStore
@@ -30,4 +34,15 @@ func (wp *MiniQ) AddJob(data *store.AnyData) error {
 	}
 	wp.queue.enqueue(&job)
 	return nil
+}
+
+func (wp *MiniQ) GetJob() (*store.Job, error) {
+	job := wp.queue.dequeue()
+	if job == nil {
+		return nil, errNoJobInQueue
+	}
+
+	wp.jobStore.UpdateJobStatus(job.ID, store.Processing)
+
+	return job, nil
 }
