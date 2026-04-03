@@ -117,7 +117,7 @@ func (js *JobStore) InsertJob(job *Job) error {
 func (js *JobStore) UpdateJobStatus(jobId int, jobStatus JobStatus) error {
 	query := `
 	UPDATE jobs
-	SET jobStatus = $1 
+	SET status = $1 
 	WHERE id = $2;
 	`
 
