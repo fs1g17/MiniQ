@@ -1,64 +1,26 @@
 package main
 
 import (
-	"database/sql"
 	"fmt"
-	"time"
+	"net/http"
 
-	"github.com/fs1g17/MiniQ/queue"
-	"github.com/fs1g17/MiniQ/store"
-	"github.com/joho/godotenv"
+	"github.com/fs1g17/MiniQ/internal/app"
+	"github.com/labstack/echo/v5"
 )
 
-func setup() *sql.DB {
-	godotenv.Load()
-	fmt.Println(store.GetConnectionString())
-	pgDB, err := store.Open()
-	if err != nil {
-		panic("not connected to db")
-	}
-	return pgDB
-}
-
 func main() {
-	pgDB := setup()
-	log := make(chan string)
+	app := app.NewApp()
 
-	jobStore := store.NewJobStore(pgDB)
+	e := echo.New()
 
-	miniQ := queue.CreateMiniQ(jobStore, log)
-	miniQ.AddWorker(func(data store.AnyData) error {
-		log <- fmt.Sprint(data)
-		return nil
-	})
-	miniQ.AddWorker(func(data store.AnyData) error {
-		log <- fmt.Sprint(data)
-		return nil
+	e.GET("/", func(c *echo.Context) error {
+		return c.String(http.StatusOK, "Hello, World!")
 	})
 
-	err := miniQ.AddJob(&store.AnyData{"A": 1, "B": 2})
-	if err != nil {
-		fmt.Errorf("Failed to add job %w", err)
-		return
-	}
-	err = miniQ.AddJob(&store.AnyData{"A": 3, "B": 4})
-	if err != nil {
-		fmt.Errorf("Failed to add job %w", err)
-		return
-	}
+	e.POST("/addJob", app.Handler.HandleAddJob)
+	e.GET("/getJob", app.Handler.HandleGetJob)
 
-	go func() {
-		time.Sleep(12 * time.Second)
-
-		err = miniQ.AddJob(&store.AnyData{"A": 5, "B": 6})
-		if err != nil {
-			fmt.Errorf("Failed to add job %w", err)
-			return
-		}
-	}()
-
-	for {
-		msg := <-log
-		fmt.Println("LOG:", msg)
+	if err := e.Start(":8080"); err != nil {
+		fmt.Printf("Failed to start server: %v\n", err)
 	}
 }
