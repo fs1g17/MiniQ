@@ -11,6 +11,12 @@ type Queue struct {
 	mu   sync.Mutex
 }
 
+func (q *Queue) getJobs() []*store.Job {
+	q.mu.Lock()
+	defer q.mu.Unlock()
+	return q.jobs
+}
+
 func (q *Queue) enqueue(job *store.Job) {
 	q.mu.Lock()
 	defer q.mu.Unlock()

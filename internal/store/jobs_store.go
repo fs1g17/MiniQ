@@ -154,3 +154,37 @@ func (js *JobStore) GetJob(id int) (*Job, error) {
 
 	return &job, nil
 }
+
+func (js *JobStore) GetQueuedJobs() ([]*Job, error) {
+	query := `
+	SELECT id, status, data, attempts
+	FROM jobs 
+	WHERE status = 'queued';
+	`
+
+	var queue []*Job
+	rows, err := js.db.Query(query)
+	if err != nil {
+		return nil, err
+	}
+
+	defer rows.Close()
+	for rows.Next() {
+		var job Job
+		var jobStatus string
+		rows.Scan(
+			&job.ID,
+			&jobStatus,
+			&job.Data,
+			&job.Attempts,
+		)
+		actualJobStatus, err := GetJobStatus(jobStatus)
+		if err != nil {
+			return nil, err
+		}
+		job.Status = actualJobStatus
+		queue = append(queue, &job)
+	}
+
+	return queue, nil
+}

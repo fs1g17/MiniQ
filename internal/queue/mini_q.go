@@ -2,6 +2,7 @@ package queue
 
 import (
 	"errors"
+	"fmt"
 
 	"github.com/fs1g17/MiniQ/internal/store"
 )
@@ -14,10 +15,15 @@ type MiniQ struct {
 }
 
 func CreateMiniQ(jobStore *store.JobStore) *MiniQ {
+	jobs, err := jobStore.GetQueuedJobs()
+	if err != nil {
+		panic(fmt.Sprintf("failed to recreated job queue from db %v", err))
+	}
+
 	miniQ := MiniQ{
 		jobStore: jobStore,
 		queue: &Queue{
-			jobs: []*store.Job{},
+			jobs: jobs,
 		},
 	}
 
@@ -45,4 +51,8 @@ func (wp *MiniQ) GetJob() (*store.Job, error) {
 	wp.jobStore.UpdateJobStatus(job.ID, store.Processing)
 
 	return job, nil
+}
+
+func (wp *MiniQ) GetJobs() []*store.Job {
+	return wp.queue.getJobs()
 }
