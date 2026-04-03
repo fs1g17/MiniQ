@@ -125,3 +125,12 @@ so I'm thinking of doing this approach:
 - the queue then should have a list of registered workers, once a worker is busy, we remove it from workers list (essentially a list of endpoints)
 - once a worker finishes with work, we can "re-register" it with the queue
 - bob's your uncle (is that why he's called uncle bob?)
+
+### Restarting the Queue
+
+At this stage, I have persistence in postgres
+but if the server is turned off, the in-memory queue doesn't get recreated
+
+I guess that's the next step, have a special step that reads all the jobs that have status "queued", and recreate them as Job structs and stick them into memory on startup.
+
+I guess I can also have a little helper endpoint that returns the current state of the queue.
