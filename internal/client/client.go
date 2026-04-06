@@ -1,6 +1,7 @@
 package client
 
 import (
+	"bytes"
 	"encoding/json"
 	"log"
 	"net/http"
@@ -37,17 +38,43 @@ func PollForJob(serverURL string) {
 
 		if resp.StatusCode == http.StatusOK {
 			//TODO: process job
+			var success bool
 			var jobRequest JobResponse
 			if err := json.NewDecoder(resp.Body).Decode(&jobRequest); err != nil {
 				log.Printf("Decode error: %v", err)
+				success = false
 			} else {
 				log.Printf("Received: %+v", jobRequest)
 				log.Println("working on job...")
 				time.Sleep(5 * time.Second)
 				log.Println("finished working on job")
+				success = true
 			}
+			NotifyJobEnd(serverURL, jobRequest.Job.ID, success)
 		}
 
 		resp.Body.Close()
 	}
+}
+
+type NotifyJobEndData struct {
+	JobID   int  `json:"jobID"`
+	Success bool `json:"success"`
+}
+
+func NotifyJobEnd(serverURL string, jobID int, success bool) {
+	client := &http.Client{
+		Timeout: 35 * time.Second,
+	}
+
+	url := serverURL + "/completeJob"
+
+	data := NotifyJobEndData{JobID: jobID, Success: success}
+	b, err := json.Marshal(data)
+	if err != nil {
+		log.Println("Failed to serialize data")
+	}
+
+	body := bytes.NewBuffer(b)
+	client.Post(url, "application/json", body)
 }

@@ -18,6 +18,7 @@ func main() {
 	})
 
 	e.POST("/addJob", app.Handler.HandleAddJob)
+	e.POST("/completeJob", app.Handler.HandleCompleteJob)
 	e.GET("/getJob", app.Handler.HandleGetJob)
 	e.GET("/pollJob", app.Handler.HandlePollJob)
 	e.GET("/getJobs", app.Handler.HandleGetJobs)

@@ -65,7 +65,26 @@ outer:
 		}
 	}
 
-	return nil
+	return c.JSON(http.StatusNoContent, nil)
+}
+
+type completeJobRequest struct {
+	JobID   int  `json:"jobID"`
+	Success bool `json:"success"`
+}
+
+func (h *QueueHandler) HandleCompleteJob(c *echo.Context) error {
+	var req completeJobRequest
+	if err := c.Bind(&req); err != nil {
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "invalid request"})
+	}
+
+	err := h.miniq.CompleteJob(req.JobID, req.Success)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "internal server error"})
+	}
+
+	return c.JSON(http.StatusOK, nil)
 }
 
 func (h *QueueHandler) HandleGetJob(c *echo.Context) error {

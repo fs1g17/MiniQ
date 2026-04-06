@@ -58,6 +58,17 @@ func (wp *MiniQ) AssignJob(jobID int) error {
 	return err
 }
 
+func (wp *MiniQ) CompleteJob(jobID int, success bool) error {
+	var jobStatus store.JobStatus
+	if success {
+		jobStatus = store.Completed
+	} else {
+		jobStatus = store.Failed
+	}
+	err := wp.jobStore.UpdateJobStatus(jobID, jobStatus)
+	return err
+}
+
 func (wp *MiniQ) GetJobs() []*store.Job {
 	return wp.queue.getJobs()
 }
