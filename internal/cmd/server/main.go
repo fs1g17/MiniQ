@@ -19,6 +19,7 @@ func main() {
 
 	e.POST("/addJob", app.Handler.HandleAddJob)
 	e.GET("/getJob", app.Handler.HandleGetJob)
+	e.GET("/pollJob", app.Handler.HandlePollJob)
 	e.GET("/getJobs", app.Handler.HandleGetJobs)
 
 	if err := e.Start(":8080"); err != nil {
