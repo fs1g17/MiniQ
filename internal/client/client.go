@@ -18,6 +18,17 @@ func PollForJob(serverURL string) {
 	client := &http.Client{
 		Timeout: 35 * time.Second,
 	}
+	var success bool = false
+	var jobRequest *JobResponse
+
+	defer func() {
+		if r := recover(); r != nil {
+			if jobRequest != nil {
+				//something in the job failed
+				NotifyJobEnd(serverURL, jobRequest.Job.ID, false)
+			}
+		}
+	}()
 
 	for {
 		log.Printf("making request to %s\n", serverURL+"/pollJob")
@@ -38,11 +49,8 @@ func PollForJob(serverURL string) {
 
 		if resp.StatusCode == http.StatusOK {
 			//TODO: process job
-			var success bool
-			var jobRequest JobResponse
 			if err := json.NewDecoder(resp.Body).Decode(&jobRequest); err != nil {
 				log.Printf("Decode error: %v", err)
-				success = false
 			} else {
 				log.Printf("Received: %+v", jobRequest)
 				log.Println("working on job...")
