@@ -134,3 +134,10 @@ but if the server is turned off, the in-memory queue doesn't get recreated
 I guess that's the next step, have a special step that reads all the jobs that have status "queued", and recreate them as Job structs and stick them into memory on startup.
 
 I guess I can also have a little helper endpoint that returns the current state of the queue.
+
+### Long-Polling
+
+ok so now I'm at a point where the queue is persistent and I can add jobs. There's also an endpoint /getJob which dequeues safely, updates job status in database, and sends it.
+
+I want the client to now do long polling until a job is available.
+once it gets a job, to process the job, then query again.

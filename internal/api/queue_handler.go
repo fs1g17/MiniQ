@@ -2,7 +2,10 @@ package api
 
 import (
 	"errors"
+	"log"
 	"net/http"
+	"sync"
+	"time"
 
 	"github.com/fs1g17/MiniQ/internal/queue"
 	"github.com/fs1g17/MiniQ/internal/store"
@@ -10,12 +13,17 @@ import (
 )
 
 type QueueHandler struct {
-	miniq *queue.MiniQ
+	miniq   *queue.MiniQ
+	mu      sync.RWMutex
+	clients map[chan store.Job]struct{}
+	jobs    []store.Job
 }
 
 func NewQueueHandler(miniq *queue.MiniQ) *QueueHandler {
 	return &QueueHandler{
-		miniq: miniq,
+		miniq:   miniq,
+		clients: make(map[chan store.Job]struct{}),
+		jobs:    make([]store.Job, 0),
 	}
 }
 
@@ -39,12 +47,44 @@ func (h *QueueHandler) HandleAddJob(c *echo.Context) error {
 		return c.JSON(http.StatusBadRequest, map[string]string{"error": err.Error()})
 	}
 
-	err := h.miniq.AddJob(&req.Data)
+	job, err := h.miniq.AddJob(&req.Data)
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "internal server error"})
 	}
 
-	return c.JSON(http.StatusOK, map[string]string{"message": "ok"})
+	h.mu.RLock()
+	defer h.mu.RUnlock()
+
+outer:
+	for clientChan := range h.clients {
+		select {
+		case clientChan <- *job:
+			break outer // sends to first available channel
+		default:
+			// CLient is slow or not listening, skip
+		}
+	}
+
+	return c.JSON(http.StatusNoContent, nil)
+}
+
+type completeJobRequest struct {
+	JobID   int  `json:"jobID"`
+	Success bool `json:"success"`
+}
+
+func (h *QueueHandler) HandleCompleteJob(c *echo.Context) error {
+	var req completeJobRequest
+	if err := c.Bind(&req); err != nil {
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "invalid request"})
+	}
+
+	err := h.miniq.CompleteJob(req.JobID, req.Success)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "internal server error"})
+	}
+
+	return c.JSON(http.StatusOK, nil)
 }
 
 func (h *QueueHandler) HandleGetJob(c *echo.Context) error {
@@ -60,4 +100,44 @@ func (h *QueueHandler) HandleGetJob(c *echo.Context) error {
 func (h *QueueHandler) HandleGetJobs(c *echo.Context) error {
 	jobs := h.miniq.GetJobs()
 	return c.JSON(http.StatusOK, map[string]any{"jobs": jobs})
+}
+
+func (h *QueueHandler) HandlePollJob(c *echo.Context) error {
+	jobChan := make(chan store.Job, 1)
+
+	h.mu.Lock()
+	h.clients[jobChan] = struct{}{}
+	h.mu.Unlock()
+
+	defer func() {
+		h.mu.Lock()
+		delete(h.clients, jobChan)
+		h.mu.Unlock()
+		close(jobChan)
+	}()
+
+	ctx := c.Request().Context()
+
+	// if jobs available, get directly from the queue
+	job, _ := h.miniq.GetJob()
+	log.Printf("HERE, job is: %v", job)
+	if job != nil {
+		c.Response().Header().Set("Content-Type", "application/json")
+		c.JSON(http.StatusOK, map[string]any{"job": job})
+		return nil
+	}
+
+	// if no job available, wait inside the long poll until one is added
+	select {
+	case job := <-jobChan:
+		h.miniq.AssignJob(job.ID)
+		c.Response().Header().Set("Content-Type", "application/json")
+		c.JSON(http.StatusOK, map[string]any{"job": job})
+	case <-time.After(30 * time.Second):
+		c.JSON(http.StatusNoContent, nil)
+	case <-ctx.Done():
+		return nil
+	}
+
+	return nil
 }

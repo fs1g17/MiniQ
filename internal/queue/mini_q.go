@@ -30,16 +30,16 @@ func CreateMiniQ(jobStore *store.JobStore) *MiniQ {
 	return &miniQ
 }
 
-func (wp *MiniQ) AddJob(data *store.AnyData) error {
+func (wp *MiniQ) AddJob(data *store.AnyData) (*store.Job, error) {
 	job := store.Job{
 		Data: *data,
 	}
 	err := wp.jobStore.InsertJob(&job)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	wp.queue.enqueue(&job)
-	return nil
+	return &job, nil
 }
 
 func (wp *MiniQ) GetJob() (*store.Job, error) {
@@ -51,6 +51,22 @@ func (wp *MiniQ) GetJob() (*store.Job, error) {
 	wp.jobStore.UpdateJobStatus(job.ID, store.Processing)
 
 	return job, nil
+}
+
+func (wp *MiniQ) AssignJob(jobID int) error {
+	err := wp.jobStore.UpdateJobStatus(jobID, store.Processing)
+	return err
+}
+
+func (wp *MiniQ) CompleteJob(jobID int, success bool) error {
+	var jobStatus store.JobStatus
+	if success {
+		jobStatus = store.Completed
+	} else {
+		jobStatus = store.Failed
+	}
+	err := wp.jobStore.UpdateJobStatus(jobID, jobStatus)
+	return err
 }
 
 func (wp *MiniQ) GetJobs() []*store.Job {
