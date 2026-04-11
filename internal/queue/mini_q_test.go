@@ -66,3 +66,11 @@ func TestHappyPath(t *testing.T) {
 	assert.Equal(t, "Hello world!", job.Data["message"], "Expected data message to be present")
 	assert.Equal(t, store.Processing, jobStore.jobs[0].Status, "Expected job store job to be processing")
 }
+
+func TestEmptyQueue(t *testing.T) {
+	jobStore := NewMockJobStore()
+	miniq := CreateMiniQ(jobStore)
+
+	_, err := miniq.GetJob()
+	assert.EqualError(t, err, errNoJobInQueue.Error(), "Expected to get empty queue error")
+}
