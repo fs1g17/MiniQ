@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"slices"
 	"testing"
+	"time"
 
 	"github.com/fs1g17/MiniQ/internal/store"
 	"github.com/stretchr/testify/assert"
@@ -73,4 +74,44 @@ func TestEmptyQueue(t *testing.T) {
 
 	_, err := miniq.GetJob()
 	assert.EqualError(t, err, errNoJobInQueue.Error(), "Expected to get empty queue error")
+}
+
+func TestCompleteJob(t *testing.T) {
+	tests := []struct {
+		name    string
+		success bool
+		want    store.JobStatus
+		message string
+	}{
+		{
+			name:    "success",
+			success: true,
+			want:    store.Completed,
+			message: "Expected job to be in completed state",
+		},
+		{
+			name:    "failure",
+			success: false,
+			want:    store.Failed,
+			message: "Expected job to be in failed state",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			jobStore := NewMockJobStore()
+			jobStore.jobs = append(jobStore.jobs, &store.Job{
+				ID:        1,
+				Status:    store.Processing,
+				Data:      store.AnyData{"message": "hello world!"},
+				Attempts:  0,
+				CreatedAt: time.Now(),
+			})
+			miniq := CreateMiniQ(jobStore)
+
+			miniq.CompleteJob(1, tt.success)
+
+			assert.Equal(t, tt.want, jobStore.jobs[0].Status, tt.message)
+		})
+	}
 }
