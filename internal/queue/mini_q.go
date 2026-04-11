@@ -9,12 +9,18 @@ import (
 
 var errNoJobInQueue = errors.New("queue is empty")
 
+type JobStore interface {
+	GetQueuedJobs() ([]*store.Job, error)
+	InsertJob(job *store.Job) error
+	UpdateJobStatus(jobId int, jobStatus store.JobStatus) error
+}
+
 type MiniQ struct {
-	jobStore *store.JobStore
+	jobStore JobStore
 	queue    *Queue
 }
 
-func CreateMiniQ(jobStore *store.JobStore) *MiniQ {
+func CreateMiniQ(jobStore JobStore) *MiniQ {
 	jobs, err := jobStore.GetQueuedJobs()
 	if err != nil {
 		panic(fmt.Sprintf("failed to recreated job queue from db %v", err))
