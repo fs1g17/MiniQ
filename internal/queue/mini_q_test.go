@@ -3,6 +3,7 @@ package queue
 import (
 	"fmt"
 	"slices"
+	"sync"
 	"testing"
 	"time"
 
@@ -114,4 +115,52 @@ func TestCompleteJob(t *testing.T) {
 			assert.Equal(t, tt.want, jobStore.jobs[0].Status, tt.message)
 		})
 	}
+}
+
+func TestParallelJobs(t *testing.T) {
+	jobStore := NewMockJobStore()
+	jobStore.jobs = append(jobStore.jobs, &store.Job{
+		ID:        1,
+		Status:    store.Queued,
+		Data:      store.AnyData{"message": "hello world!"},
+		Attempts:  0,
+		CreatedAt: time.Now(),
+	})
+	jobStore.jobs = append(jobStore.jobs, &store.Job{
+		ID:        2,
+		Status:    store.Queued,
+		Data:      store.AnyData{"message": "hello world!"},
+		Attempts:  0,
+		CreatedAt: time.Now(),
+	})
+	miniq := CreateMiniQ(jobStore)
+
+	jobChan := make(chan store.Job, 2)
+
+	var wg sync.WaitGroup
+	for range 2 {
+		wg.Go(func() {
+			job, err := miniq.GetJob()
+			if err != nil {
+				return
+			}
+			miniq.CompleteJob(job.ID, true)
+			jobChan <- *job
+		})
+	}
+
+	wg.Wait()
+	close(jobChan)
+
+	jobMap := make(map[int]struct{}, 2)
+	jobSlice := make([]store.Job, 0, 2)
+	for job := range jobChan {
+		jobSlice = append(jobSlice, job)
+		if _, ok := jobMap[job.ID]; ok == true {
+			// value already exists, so some worker got same job
+			t.Errorf("job with id %d given to multiple different workers", job.ID)
+		}
+		jobMap[job.ID] = struct{}{}
+	}
+	assert.Equal(t, 2, len(jobSlice), "Expected there to be 2 complete jobs")
 }
