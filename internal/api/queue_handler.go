@@ -7,19 +7,26 @@ import (
 	"sync"
 	"time"
 
-	"github.com/fs1g17/MiniQ/internal/queue"
 	"github.com/fs1g17/MiniQ/internal/store"
 	"github.com/labstack/echo/v5"
 )
 
+type MiniQueue interface {
+	AddJob(data *store.AnyData) (*store.Job, error)
+	CompleteJob(jobID int, success bool) error
+	GetJob() (*store.Job, error)
+	GetJobs() []*store.Job
+	AssignJob(jobID int) error
+}
+
 type QueueHandler struct {
-	miniq   *queue.MiniQ
+	miniq   MiniQueue
 	mu      sync.RWMutex
 	clients map[chan store.Job]struct{}
 	jobs    []store.Job
 }
 
-func NewQueueHandler(miniq *queue.MiniQ) *QueueHandler {
+func NewQueueHandler(miniq MiniQueue) *QueueHandler {
 	return &QueueHandler{
 		miniq:   miniq,
 		clients: make(map[chan store.Job]struct{}),
