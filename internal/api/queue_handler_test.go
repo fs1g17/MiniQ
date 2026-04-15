@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"slices"
+	"strings"
 	"testing"
 	"time"
 
@@ -93,9 +94,11 @@ func TestEdgeCase(t *testing.T) {
 	}
 	queueHandler := NewQueueHandler(&mockQ)
 
+	e := echo.New()
+
 	req := httptest.NewRequest(http.MethodGet, "/pollJob", nil)
 	rec := httptest.NewRecorder()
-	ctx := echo.NewContext(req, rec)
+	ctx := e.NewContext(req, rec)
 
 	go func() {
 		queueHandler.HandlePollJob(ctx)
@@ -103,7 +106,13 @@ func TestEdgeCase(t *testing.T) {
 
 	<-mockQ.readyCh
 
-	queueHandler.miniq.AddJob(&store.AnyData{"message": "hello world"})
+	body := strings.NewReader(`{"data": {"message": "hello world"}}`)
+	addReq := httptest.NewRequest(http.MethodPost, "/addJob", body)
+	addReq.Header.Set("Content-Type", "application/json")
+	addRec := httptest.NewRecorder()
+	addCtx := e.NewContext(addReq, addRec)
+	queueHandler.HandleAddJob(addCtx)
+
 	time.Sleep(1 * time.Second)
 	job, err := miniQ.GetJob()
 
