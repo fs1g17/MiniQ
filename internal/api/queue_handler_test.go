@@ -90,7 +90,7 @@ func TestEdgeCase(t *testing.T) {
 
 	mockQ := mockMiniQ{
 		miniQ:   miniQ,
-		readyCh: make(chan struct{}),
+		readyCh: make(chan struct{}, 1),
 	}
 	queueHandler := NewQueueHandler(&mockQ)
 
