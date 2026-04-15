@@ -138,15 +138,16 @@ func (h *QueueHandler) HandlePollJob(c *echo.Context) error {
 	select {
 	case <-pingChan:
 		job, _ := h.miniq.GetJob()
-		if job != nil {
-			c.Response().Header().Set("Content-Type", "application/json")
-			c.JSON(http.StatusOK, map[string]any{"job": job})
+		if job == nil {
+			c.JSON(http.StatusNoContent, nil)
 			return nil
 		}
+		c.Response().Header().Set("Content-Type", "application/json")
+		c.JSON(http.StatusOK, map[string]any{"job": job})
 	case <-time.After(30 * time.Second):
 		c.JSON(http.StatusNoContent, nil)
 	case <-ctx.Done():
-		return nil
+		// just return nil
 	}
 
 	return nil
