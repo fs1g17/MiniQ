@@ -119,26 +119,24 @@ func TestCompleteJob(t *testing.T) {
 
 func TestParallelJobs(t *testing.T) {
 	jobStore := NewMockJobStore()
-	jobStore.jobs = append(jobStore.jobs, &store.Job{
-		ID:        1,
-		Status:    store.Queued,
-		Data:      store.AnyData{"message": "hello world!"},
-		Attempts:  0,
-		CreatedAt: time.Now(),
-	})
-	jobStore.jobs = append(jobStore.jobs, &store.Job{
-		ID:        2,
-		Status:    store.Queued,
-		Data:      store.AnyData{"message": "hello world!"},
-		Attempts:  0,
-		CreatedAt: time.Now(),
-	})
+
+	N := 50
+
+	for i := 1; i < 1+N; i++ {
+		jobStore.jobs = append(jobStore.jobs, &store.Job{
+			ID:        i,
+			Status:    store.Queued,
+			Data:      store.AnyData{"message": "hello world!"},
+			Attempts:  0,
+			CreatedAt: time.Now(),
+		})
+	}
 	miniq := CreateMiniQ(jobStore)
 
-	jobChan := make(chan store.Job, 2)
+	jobChan := make(chan store.Job, N)
 
 	var wg sync.WaitGroup
-	for range 2 {
+	for range N {
 		wg.Go(func() {
 			job, err := miniq.GetJob()
 			if err != nil {
@@ -152,8 +150,8 @@ func TestParallelJobs(t *testing.T) {
 	wg.Wait()
 	close(jobChan)
 
-	jobMap := make(map[int]struct{}, 2)
-	jobSlice := make([]store.Job, 0, 2)
+	jobMap := make(map[int]struct{}, N)
+	jobSlice := make([]store.Job, 0, N)
 	for job := range jobChan {
 		jobSlice = append(jobSlice, job)
 		if _, ok := jobMap[job.ID]; ok == true {
@@ -162,5 +160,5 @@ func TestParallelJobs(t *testing.T) {
 		}
 		jobMap[job.ID] = struct{}{}
 	}
-	assert.Equal(t, 2, len(jobSlice), "Expected there to be 2 complete jobs")
+	assert.Equal(t, N, len(jobSlice), "Expected there to be 2 complete jobs")
 }
