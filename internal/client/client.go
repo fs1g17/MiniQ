@@ -14,17 +14,17 @@ type JobResponse struct {
 	Job store.Job `json:"job"`
 }
 
-func PollForJob(serverURL string) {
+func PollForJob(serverURL string, processor func(jobResponse JobResponse)) {
 	client := &http.Client{
 		Timeout: 35 * time.Second,
 	}
 
 	for {
-		task(serverURL, client)
+		task(serverURL, client, processor)
 	}
 }
 
-func task(serverURL string, client *http.Client) {
+func task(serverURL string, client *http.Client, processor func(jobResponse JobResponse)) {
 	var success bool = false
 	var jobRequest *JobResponse
 
@@ -57,14 +57,12 @@ func task(serverURL string, client *http.Client) {
 		//TODO: process job
 		if err := json.NewDecoder(resp.Body).Decode(&jobRequest); err != nil {
 			log.Printf("Decode error: %v", err)
+			return
 		} else {
-			log.Printf("Received: %+v", jobRequest)
-			log.Println("working on job...")
-			time.Sleep(5 * time.Second)
-			log.Println("finished working on job")
+			processor(*jobRequest)
 			success = true
+			NotifyJobEnd(serverURL, jobRequest.Job.ID, success)
 		}
-		NotifyJobEnd(serverURL, jobRequest.Job.ID, success)
 	}
 
 	resp.Body.Close()
