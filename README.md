@@ -141,3 +141,8 @@ ok so now I'm at a point where the queue is persistent and I can add jobs. There
 
 I want the client to now do long polling until a job is available.
 once it gets a job, to process the job, then query again.
+
+### Running tests with race condition
+
+`CGO_ENABLED=1 go test -race -count=1 ./internal/queue/`
+this `-count=1` forces a fresh run

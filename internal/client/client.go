@@ -14,10 +14,17 @@ type JobResponse struct {
 	Job store.Job `json:"job"`
 }
 
-func PollForJob(serverURL string) {
+func PollForJob(serverURL string, processor func(jobResponse JobResponse)) {
 	client := &http.Client{
 		Timeout: 35 * time.Second,
 	}
+
+	for {
+		task(serverURL, client, processor)
+	}
+}
+
+func task(serverURL string, client *http.Client, processor func(jobResponse JobResponse)) {
 	var success bool = false
 	var jobRequest *JobResponse
 
@@ -30,39 +37,35 @@ func PollForJob(serverURL string) {
 		}
 	}()
 
-	for {
-		log.Printf("making request to %s\n", serverURL+"/pollJob")
-		resp, err := client.Get(serverURL + "/pollJob")
-		// if some error, retry
-		if err != nil {
-			log.Printf("Poll error: %v, retrying in 5s", err)
-			time.Sleep(5 * time.Second)
-			continue
-		}
+	log.Printf("making request to %s\n", serverURL+"/pollJob")
+	resp, err := client.Get(serverURL + "/pollJob")
+	// if some error, retry
+	if err != nil {
+		log.Printf("Poll error: %v, retrying in 5s", err)
+		time.Sleep(5 * time.Second)
+		return
+	}
 
-		// if 204, retry
-		if resp.StatusCode == http.StatusNoContent {
-			log.Println("no content")
-			resp.Body.Close()
-			continue
-		}
+	// if 204, retry
+	if resp.StatusCode == http.StatusNoContent {
+		log.Println("no content")
+		resp.Body.Close()
+		return
+	}
 
-		if resp.StatusCode == http.StatusOK {
-			//TODO: process job
-			if err := json.NewDecoder(resp.Body).Decode(&jobRequest); err != nil {
-				log.Printf("Decode error: %v", err)
-			} else {
-				log.Printf("Received: %+v", jobRequest)
-				log.Println("working on job...")
-				time.Sleep(5 * time.Second)
-				log.Println("finished working on job")
-				success = true
-			}
+	if resp.StatusCode == http.StatusOK {
+		//TODO: process job
+		if err := json.NewDecoder(resp.Body).Decode(&jobRequest); err != nil {
+			log.Printf("Decode error: %v", err)
+			return
+		} else {
+			processor(*jobRequest)
+			success = true
 			NotifyJobEnd(serverURL, jobRequest.Job.ID, success)
 		}
-
-		resp.Body.Close()
 	}
+
+	resp.Body.Close()
 }
 
 type NotifyJobEndData struct {
